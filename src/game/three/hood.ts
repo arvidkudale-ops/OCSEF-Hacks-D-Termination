@@ -520,6 +520,7 @@ export function createHood(host: HTMLElement, bins: PaintBin[]): Hood {
       lastX = s.player.x;
       lastY = s.player.y;
     }
+    // Ease the camera toward the game world's player position to avoid snapping.
     focus.x += (px - focus.x) * (1 - Math.exp(-dt * 6));
     focus.z += (pz - focus.z) * (1 - Math.exp(-dt * 6));
     view.fit(camera);
@@ -673,6 +674,7 @@ export function createHood(host: HTMLElement, bins: PaintBin[]): Hood {
       probe.set(x * S, height, y * S).project(camera);
       return Math.hypot((probe.x * 0.5 + 0.5) * rect.width - cx, (-probe.y * 0.5 + 0.5) * rect.height - cy);
     };
+    // Pick nearby items and bins by screen distance; use a ground ray for walking.
     let best: HoodPick | null = null;
     let bestD = 38;
     for (const entry of s.litters) {

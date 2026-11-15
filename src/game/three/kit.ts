@@ -38,6 +38,7 @@ export function createView(host: HTMLElement, lockTouch: boolean): View {
       if (w === lastW && h === lastH) return false;
       lastW = w;
       lastH = h;
+      // Cap device resolution to keep rendering sharp without excessive GPU work.
       renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
       renderer.setSize(w, h, false);
       camera.aspect = w / h;
@@ -61,6 +62,7 @@ export function startLoop(frame: (dt: number, time: number) => void) {
   let reported = false;
   const tick = (now: number) => {
     if (!alive) return;
+    // Cap elapsed time so a stalled browser tab cannot cause a large animation jump.
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     time += dt;

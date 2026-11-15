@@ -98,6 +98,7 @@ interface Monster {
 const easeOut = (t: number) => 1 - (1 - t) ** 3;
 
 export function createStage(host: HTMLElement, theme: StageTheme): Stage {
+  // Build the themed 3D backdrop; game rules and scoring stay in the React level.
   const view = createView(host, false);
   const reduce = prefersReducedMotion();
   const boss = theme === "boss";
@@ -1042,6 +1043,7 @@ export function createStage(host: HTMLElement, theme: StageTheme): Stage {
   function pick(clientX: number, clientY: number) {
     const rect = view.canvas.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return null;
+    // Convert screen pixels to a camera ray, then test only the bin models.
     pointer.set(
       ((clientX - rect.left) / rect.width) * 2 - 1,
       -((clientY - rect.top) / rect.height) * 2 + 1,
@@ -1053,10 +1055,12 @@ export function createStage(host: HTMLElement, theme: StageTheme): Stage {
 
   return {
     update(props) {
+      // React owns game state; this method mirrors it into the 3D objects.
       setBins(props.bins);
       setSteps(props.steps);
       monster?.set(props.shield, props.mood, props.bits);
       const eventN = props.event?.n ?? -1;
+      // Each event number is animated once, even if React renders again.
       if (started && props.event && eventN !== lastEvent) play(props.event);
       lastEvent = eventN;
       const itemId = props.emoji ? `${props.itemKey}|${props.emoji}` : null;

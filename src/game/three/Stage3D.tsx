@@ -42,6 +42,7 @@ export function Stage3D({
   const stageRef = useRef<Stage | null>(null);
   const [failed, setFailed] = useState(false);
   const props = { bins, emoji, itemKey, event, steps, shield, mood, bits };
+  // Keep the latest game data available without rebuilding the WebGL scene.
   const latest = useRef(props);
   latest.current = props;
 
@@ -75,6 +76,7 @@ export function Stage3D({
       className={`overflow-hidden ${className}`}
       aria-hidden
       onClick={(pointer) => {
+        // Turn a canvas click into a bin choice for the React game logic.
         const id = stageRef.current?.pick(pointer.clientX, pointer.clientY);
         if (id && onChoose) onChoose(id);
       }}
