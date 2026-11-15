@@ -45,6 +45,7 @@ type Action =
       day?: string;
       grid?: string;
     }
+  | { type: "restore-state"; state: AppState }
   | { type: "reset-progress" };
 
 /** Adds a badge id once, and only if that badge exists. */
@@ -187,6 +188,8 @@ function reducer(state: AppState, action: Action): AppState {
         sound: state.sound,
         theme: state.theme,
       };
+    case "restore-state":
+      return action.state;
     default:
       return state;
   }
@@ -216,6 +219,7 @@ interface AppApi {
     day?: string;
     grid?: string;
   }) => void;
+  restoreState: (state: AppState) => void;
   resetProgress: () => void;
 }
 
@@ -250,6 +254,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       recordAnswer: (itemId, correct) =>
         dispatch({ type: "answer", itemId, correct }),
       finishArcade: (result) => dispatch({ type: "finish-arcade", ...result }),
+      restoreState: (state) => dispatch({ type: "restore-state", state }),
       resetProgress: () => dispatch({ type: "reset-progress" }),
     }),
     [state],

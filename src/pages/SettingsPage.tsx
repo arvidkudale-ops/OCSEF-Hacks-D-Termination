@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
+import { Download, Upload } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { ZipField } from "../components/ZipField";
+import { dayKey } from "../lib/day";
+import { createBackup, parseBackup } from "../lib/storage";
+import type { AppState } from "../types";
 import {
   buttonClass,
   Card,
@@ -16,11 +20,54 @@ interface StatusBody {
 
 /** Name, ZIP, theme, sound, recognition status, and the progress reset. */
 export function SettingsPage() {
-  const { state, setName, setSound, setTheme, resetProgress } = useApp();
+  const {
+    state,
+    setName,
+    setSound,
+    setTheme,
+    restoreState,
+    resetProgress,
+  } = useApp();
   const dark = state.theme === "dark";
   const [confirm, setConfirm] = useState(false);
+  const [backupToRestore, setBackupToRestore] = useState<AppState | null>(null);
+  const [backupError, setBackupError] = useState("");
+  const [backupNotice, setBackupNotice] = useState("");
   const [status, setStatus] = useState<StatusBody | null>(null);
   const [statusError, setStatusError] = useState("");
+
+  function downloadBackup() {
+    const blob = new Blob([createBackup(state)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `d-trashify-backup-${dayKey()}.json`;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setBackupNotice("Backup downloaded. Keep the file somewhere safe.");
+    setBackupError("");
+  }
+
+  async function loadBackup(file: File) {
+    setBackupToRestore(null);
+    setBackupNotice("");
+    setBackupError("");
+    if (file.size > 5 * 1024 * 1024) {
+      setBackupError("That file is too large to be a D-Trashify backup.");
+      return;
+    }
+    try {
+      setBackupToRestore(parseBackup(await file.text()));
+    } catch (error) {
+      setBackupError(
+        error instanceof Error
+          ? error.message
+          : "Could not read that backup file.",
+      );
+    }
+  }
 
   useEffect(() => {
     const controller = new AbortController();
@@ -108,6 +155,49 @@ export function SettingsPage() {
       </Card>
       <Card className="space-y-3">
         <h2 className="font-display text-2xl text-forest-900">
+          Back up your data
+        </h2>
+        <p className="text-sm leading-6 text-ink-soft">
+          Download your settings, scans, disposal log, and game progress as a
+          file. The backup stays on your device unless you choose to share it.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            className={buttonClass("secondary")}
+            type="button"
+            onClick={downloadBackup}
+          >
+            <Download aria-hidden size={16} />
+            Download backup
+          </button>
+          <label className={buttonClass("secondary")}>
+            <Upload aria-hidden size={16} />
+            Choose backup to restore
+            <input
+              className="sr-only"
+              type="file"
+              accept="application/json,.json"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void loadBackup(file);
+                event.target.value = "";
+              }}
+            />
+          </label>
+        </div>
+        {backupError ? (
+          <p role="alert" className="text-sm text-red-900">
+            {backupError}
+          </p>
+        ) : null}
+        {backupNotice ? (
+          <p role="status" className="text-sm text-forest-900">
+            {backupNotice}
+          </p>
+        ) : null}
+      </Card>
+      <Card className="space-y-3">
+        <h2 className="font-display text-2xl text-forest-900">
           Recognition service
         </h2>
         {statusError ? (
@@ -166,6 +256,39 @@ export function SettingsPage() {
               }}
             >
               Reset progress
+            </button>
+          </div>
+        </Modal>
+      ) : null}
+      {backupToRestore ? (
+        <Modal
+          title="Replace this browser's data?"
+          onClose={() => setBackupToRestore(null)}
+        >
+          <p>
+            This backup contains {backupToRestore.scans.length} scans,{" "}
+            {backupToRestore.disposals.length} logged sorts, and{" "}
+            {backupToRestore.game.points} game points. Restoring replaces the
+            current settings and progress in this browser.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              className={buttonClass("secondary")}
+              type="button"
+              onClick={() => setBackupToRestore(null)}
+            >
+              Cancel
+            </button>
+            <button
+              className={buttonClass("danger")}
+              type="button"
+              onClick={() => {
+                restoreState(backupToRestore);
+                setBackupToRestore(null);
+                setBackupNotice("Backup restored to this browser.");
+              }}
+            >
+              Replace with backup
             </button>
           </div>
         </Modal>

@@ -28,7 +28,7 @@ No API keys are required. Leave `RECOGNITION_API_KEY` blank and the scanner stay
 
 The scanner can preview a photo from an upload or the device camera. Photos are not saved in this app. Clicking **Identify item** asks the local dev server whether Gemini is configured. If it is not, you choose the item yourself. A file name can suggest one item when the name is unambiguous. That suggestion is labeled as a filename hint, not as image recognition.
 
-Progress is stored in `localStorage` under `releaf-demo-v1`. Reset it from Settings. Reset keeps your display name, ZIP code, and sound preference.
+Progress is stored in `localStorage` under `releaf-demo-v1`. In Settings, download a versioned JSON backup to move your data between browsers or devices, or restore a backup after confirming that it will replace the current local settings and progress. Backup files stay on your device unless you choose to share them. Reset keeps your display name, ZIP code, and sound preference.
 
 ## Local rules and facilities
 
