@@ -15,7 +15,18 @@ import { buttonClass } from "../components/ui";
 import { GameChrome } from "./GameChrome";
 import { ComboBadge } from "./GameBits";
 import { neighborhoodLitter } from "./pools";
-import { paintNeighborhood, SOLIDS, WORLD_H, WORLD_W } from "./neighborhoodArt";
+import {
+  paintMinimap,
+  paintNeighborhood,
+  SOLIDS,
+  WORLD_H,
+  WORLD_W,
+} from "./neighborhoodArt";
+import { createHood } from "./three/hood";
+import type { Hood } from "./three/hood";
+
+/** Seconds the finished block stays on screen before the victory screen. */
+const FINISH_PAUSE = 0.9;
 
 const SPEED = 280;
 /** How close the player can stand to a wall before the building stops them. */
@@ -357,7 +368,12 @@ export function NeighborhoodLevel({
 }) {
   const navigate = useNavigate();
   const { state, setSound, recordAnswer } = useApp();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const hostRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<HTMLCanvasElement>(null);
+  const hoodRef = useRef<Hood | null>(null);
+  const flatRef = useRef<HTMLCanvasElement | null>(null);
+  /** True when WebGL is missing and the level falls back to the flat map. */
+  const [flat, setFlat] = useState(false);
   const [initial] = useState(() =>
     createRuntime(
       neighborhoodLitter(
@@ -379,14 +395,34 @@ export function NeighborhoodLevel({
   const sync = useCallback(() => setHud(readHud(runtime.current)), []);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const context = canvas.getContext("2d");
-    if (!context) return;
+    const host = hostRef.current;
+    if (!host) return;
+    let hood: Hood | null = null;
+    let canvas: HTMLCanvasElement | null = null;
+    let context: CanvasRenderingContext2D | null = null;
+    if (flat) {
+      canvas = document.createElement("canvas");
+      canvas.style.cssText =
+        "display:block;width:100%;height:100%;touch-action:none";
+      host.appendChild(canvas);
+      context = canvas.getContext("2d");
+    } else {
+      try {
+        hood = createHood(host, BINS);
+        runtime.current.cam.w = 0;
+      } catch (error) {
+        console.warn("3D view unavailable, using the flat map.", error);
+        setFlat(true);
+        return;
+      }
+    }
+    hoodRef.current = hood;
+    flatRef.current = canvas;
     let alive = true;
     let frame = 0;
     let last = performance.now();
     let reported = false;
+    let doneFor = 0;
     const loop = (now: number) => {
       if (!alive) return;
       try {
@@ -395,12 +431,21 @@ export function NeighborhoodLevel({
         const current = runtime.current;
         if (!current.paused && !current.done) {
           if (stepWorld(current, dt, soundRef.current)) sync();
-          if (current.done && !finished.current) {
+        }
+        // The last item can be sorted by a button as well as by walking, so
+        // check for the finish on every frame, not only after a step.
+        if (current.done && !finished.current) {
+          doneFor += dt;
+          if (doneFor >= FINISH_PAUSE) {
             finished.current = true;
             onCompleteRef.current(resultFrom(current.tally));
           }
         }
-        paintNeighborhood(context, canvas, current, BINS);
+        if (hood) {
+          hood.render(current, dt);
+          if (mapRef.current) paintMinimap(mapRef.current, current, BINS);
+        } else if (context && canvas)
+          paintNeighborhood(context, canvas, current, BINS);
       } catch (error) {
         if (!reported) {
           reported = true;
@@ -413,8 +458,12 @@ export function NeighborhoodLevel({
     return () => {
       alive = false;
       cancelAnimationFrame(frame);
+      hoodRef.current = null;
+      flatRef.current = null;
+      hood?.dispose();
+      canvas?.remove();
     };
-  }, [sync]);
+  }, [sync, flat]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -500,6 +549,7 @@ export function NeighborhoodLevel({
     }
     if (
       current.nearBinId &&
+      current.inventory.length > 0 &&
       deposit(current, current.nearBinId, soundRef.current)
     ) {
       sync();
@@ -544,21 +594,39 @@ export function NeighborhoodLevel({
     };
   }
 
-  function onCanvasClick(event: ReactMouseEvent<HTMLCanvasElement>) {
-    const canvas = canvasRef.current;
-    if (!canvas || runtime.current.paused) return;
-    const rect = canvas.getBoundingClientRect();
+  function onCanvasClick(event: ReactMouseEvent<HTMLDivElement>) {
     const current = runtime.current;
-    const x =
-      ((event.clientX - rect.left) / rect.width) * current.cam.w +
-      current.cam.x;
-    const y =
-      ((event.clientY - rect.top) / rect.height) * current.cam.h +
-      current.cam.y;
-    const litter = current.litters
-      .filter((entry) => !entry.taken)
-      .find((entry) => Math.hypot(entry.x - x, entry.y - y) < 40);
-    const bin = BINS.find((entry) => Math.hypot(entry.x - x, entry.y - y) < 50);
+    if (current.paused || current.done) return;
+    let x = 0;
+    let y = 0;
+    let litter: Litter | undefined;
+    let bin: (typeof BINS)[number] | undefined;
+    const hood = hoodRef.current;
+    const canvas = flatRef.current;
+    if (hood) {
+      const hit = hood.pick(event.clientX, event.clientY, current);
+      if (!hit) return;
+      if (hit.kind === "item")
+        litter = current.litters.find((entry) => entry.id === hit.id);
+      else if (hit.kind === "bin")
+        bin = BINS.find((entry) => entry.id === hit.id);
+      else {
+        x = hit.x;
+        y = hit.y;
+      }
+    } else if (canvas) {
+      const rect = canvas.getBoundingClientRect();
+      x =
+        ((event.clientX - rect.left) / rect.width) * current.cam.w +
+        current.cam.x;
+      y =
+        ((event.clientY - rect.top) / rect.height) * current.cam.h +
+        current.cam.y;
+      litter = current.litters
+        .filter((entry) => !entry.taken)
+        .find((entry) => Math.hypot(entry.x - x, entry.y - y) < 40);
+      bin = BINS.find((entry) => Math.hypot(entry.x - x, entry.y - y) < 50);
+    } else return;
     if (litter)
       current.target = {
         kind: "item",
@@ -606,17 +674,24 @@ export function NeighborhoodLevel({
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_17rem]">
         <div>
           <p className="sr-only">
-            Top-down neighborhood with a park, cafe, school, homes, and a
-            sorting depot. Use arrow keys or the pad to move. E or the action
-            button picks up litter and sorts the selected item.
+            A 3D neighborhood with a park, cafe, school, homes, and a sorting
+            depot. Use arrow keys or the pad to move. E or the action button
+            picks up litter and sorts the selected item.
           </p>
-          <div className="h-80 overflow-hidden rounded-3xl bg-[#8cbf6e] shadow-[inset_0_0_0_1px_rgba(27,67,50,0.15)] sm:h-[30rem]">
-            <canvas
-              ref={canvasRef}
+          <div className="relative h-80 overflow-hidden rounded-3xl bg-[#8cbf6e] shadow-[inset_0_0_0_1px_rgba(27,67,50,0.15)] sm:h-[32rem]">
+            <div
+              ref={hostRef}
               className="h-full w-full touch-none"
               aria-hidden
               onClick={onCanvasClick}
             />
+            {flat ? null : (
+              <canvas
+                ref={mapRef}
+                className="pointer-events-none absolute right-2 top-2 w-[min(11rem,30%)]"
+                aria-hidden
+              />
+            )}
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <div className="grid grid-cols-3 gap-1" aria-label="Movement pad">
@@ -630,7 +705,7 @@ export function NeighborhoodLevel({
             <button className={buttonClass()} type="button" onClick={act}>
               {hud.nearItemId
                 ? "Pick up"
-                : hud.nearBinId
+                : hud.nearBinId && hud.inventory.length > 0
                   ? "Sort into this bin"
                   : hud.inventory.length >= CARRY_LIMIT ||
                       (hud.inventory.length > 0 && hud.remaining.length === 0)

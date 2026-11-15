@@ -51,10 +51,9 @@ function LevelRoute({ id }: { id: LevelId }) {
   return <LevelHost key={id} level={level} />;
 }
 
-/** Runs one level. Finishing pulls the next level onto the screen. */
+/** Runs one level, then shows the victory screen until the player picks what is next. */
 function LevelHost({ level }: { level: LevelDef }) {
   const { state, completeLevel } = useApp();
-  const navigate = useNavigate();
   const [result, setResult] = useState<LevelResult | null>(null);
   const [previous, setPrevious] = useState({ score: 0, stars: 0 });
   const [run, setRun] = useState(0);
@@ -66,24 +65,6 @@ function LevelHost({ level }: { level: LevelDef }) {
     setResult(value);
   }
 
-  const nextLevel = LEVEL_ORDER[LEVEL_ORDER.indexOf(level.id) + 1];
-  useEffect(() => {
-    if (!result || !nextLevel) return;
-    const timer = window.setTimeout(
-      () => navigate(`/adventure/${nextLevel}`, { state: { pull: true } }),
-      2600,
-    );
-    return () => window.clearTimeout(timer);
-  }, [result, nextLevel, navigate]);
-
-  if (result && nextLevel)
-    return (
-      <YouWon
-        onContinue={() =>
-          navigate(`/adventure/${nextLevel}`, { state: { pull: true } })
-        }
-      />
-    );
   if (result)
     return (
       <Results
@@ -368,27 +349,7 @@ function Confetti() {
   );
 }
 
-/** Celebration shown before the next level slides in. */
-function YouWon({ onContinue }: { onContinue: () => void }) {
-  return (
-    <div className="you-won relative overflow-hidden rounded-3xl px-6 py-20 text-center">
-      <Confetti />
-      <h1 className="relative font-display text-6xl">You won</h1>
-      <p className="relative mt-3 text-sm font-extrabold">
-        The next level is on its way.
-      </p>
-      <button
-        className={`${buttonClass()} relative mt-6`}
-        type="button"
-        onClick={onContinue}
-      >
-        Next level
-      </button>
-    </div>
-  );
-}
-
-/** Score summary for the last level, when there is nothing left to pull in. */
+/** Victory screen: stars, score, what the level taught, and the way to the next level. */
 function Results({
   level,
   result,
@@ -403,15 +364,52 @@ function Results({
   const navigate = useNavigate();
   const index = LEVEL_ORDER.indexOf(level.id);
   const next = LEVEL_ORDER[index + 1];
+  const nextLevel = next ? getLevel(next) : undefined;
+  const goNext = () =>
+    navigate(`/adventure/${next}`, { state: { pull: true } });
   return (
     <div className="you-won relative mx-auto max-w-2xl space-y-4 overflow-hidden rounded-3xl px-4 py-8 sm:px-8">
       <Confetti />
-      <h1 className="relative text-center font-display text-6xl">You won</h1>
+      <p className="relative text-center text-xs font-extrabold uppercase tracking-widest">
+        Level {index + 1} complete
+      </p>
+      <h1 className="relative text-center font-display text-6xl">Victory!</h1>
       <p className="relative text-center text-sm font-extrabold">
         {level.title}
       </p>
-      <Stars count={result.stars} />
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="victory-stars relative flex justify-center gap-2">
+        {[1, 2, 3].map((star) => (
+          <Star
+            key={star}
+            aria-hidden
+            size={52}
+            style={{ animationDelay: `${star * 0.18}s` }}
+            className={
+              star <= result.stars
+                ? "fill-amber-300 text-amber-400"
+                : "text-white/35"
+            }
+          />
+        ))}
+        <span className="sr-only">{result.stars} of 3 stars</span>
+      </div>
+      {next ? (
+        <div className="relative flex justify-center">
+          <button
+            className="victory-next"
+            type="button"
+            onClick={goNext}
+            autoFocus
+          >
+            Next level{nextLevel ? `: ${nextLevel.title}` : ""} →
+          </button>
+        </div>
+      ) : (
+        <p className="relative text-center text-sm font-extrabold">
+          That was the last level. The whole adventure is clear.
+        </p>
+      )}
+      <div className="relative grid gap-3 sm:grid-cols-3">
         <Card>
           <p className="text-sm font-extrabold text-ink-soft">Score</p>
           <p className="font-display text-4xl text-forest-900">
@@ -442,11 +440,13 @@ function Results({
           <p className="text-sm text-ink-soft">in a row</p>
         </Card>
       </div>
-      <p className="text-sm text-ink-soft">
+      <p className="relative text-center text-sm">
         This score is practice and is not added to your real-world impact.
       </p>
-      <MissedList itemIds={result.missedItemIds} />
-      <Card>
+      <div className="relative space-y-4">
+        <MissedList itemIds={result.missedItemIds} />
+      </div>
+      <Card className="relative">
         <h2 className="font-extrabold text-forest-900">
           What this level was teaching
         </h2>
@@ -456,15 +456,9 @@ function Results({
           ))}
         </ul>
       </Card>
-      <div className="flex flex-wrap gap-2">
+      <div className="relative flex flex-wrap justify-center gap-2">
         {next ? (
-          <button
-            className={buttonClass()}
-            type="button"
-            onClick={() =>
-              navigate(`/adventure/${next}`, { state: { pull: true } })
-            }
-          >
+          <button className={buttonClass()} type="button" onClick={goNext}>
             Next level
           </button>
         ) : (
@@ -484,7 +478,7 @@ function Results({
             Review missed items
           </Link>
         ) : null}
-        <Link className={buttonClass("ghost")} to="/adventure">
+        <Link className={buttonClass("secondary")} to="/adventure">
           All levels
         </Link>
       </div>

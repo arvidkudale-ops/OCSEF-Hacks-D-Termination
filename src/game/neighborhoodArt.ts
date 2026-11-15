@@ -463,7 +463,7 @@ function school(ctx: Ctx, t: number, reduce: boolean) {
   text(ctx, "♻", 2232, 66, "700 16px Nunito, sans-serif", "#fff");
 }
 
-const HOUSES: [number, number, string, string][] = [
+export const HOUSES: [number, number, string, string][] = [
   [90, 170, "#f4d6b0", "#9b4d3a"],
   [300, 160, "#cfe3f2", "#355c7d"],
   [500, 180, "#f6e3a6", "#7a5c2e"],
@@ -697,7 +697,7 @@ function cloudShadows(ctx: Ctx, t: number) {
   }
 }
 
-const TREES: [number, number, number][] = [
+export const TREES: [number, number, number][] = [
   [130, 170, 34],
   [700, 200, 30],
   [180, 520, 32],
@@ -910,12 +910,16 @@ function targetMarker(ctx: Ctx, s: PaintState, reduce: boolean) {
   ctx.setLineDash([]);
 }
 
-function minimap(ctx: Ctx, s: PaintState, bins: PaintBin[], cssW: number) {
-  const w = Math.min(170, cssW * 0.28);
+function minimap(
+  ctx: Ctx,
+  s: PaintState,
+  bins: PaintBin[],
+  mx: number,
+  my: number,
+  w: number,
+) {
   const scale = w / WORLD_W;
   const h = WORLD_H * scale;
-  const mx = cssW - w - 10;
-  const my = 10;
   ctx.fillStyle = "rgba(255,255,255,0.88)";
   rr(ctx, mx - 4, my - 4, w + 8, h + 8, 10);
   ctx.fill();
@@ -941,6 +945,7 @@ function minimap(ctx: Ctx, s: PaintState, bins: PaintBin[], cssW: number) {
       circle(ctx, mx + entry.x * scale, my + entry.y * scale, 2.6, "#f97316");
   circle(ctx, mx + s.player.x * scale, my + s.player.y * scale, 3.6, "#fff");
   circle(ctx, mx + s.player.x * scale, my + s.player.y * scale, 2.4, "#1b4332");
+  if (s.cam.w <= 0) return;
   ctx.strokeStyle = "rgba(27,67,50,0.8)";
   ctx.lineWidth = 1.5;
   ctx.strokeRect(
@@ -1039,5 +1044,137 @@ export function paintNeighborhood(
   ctx.globalAlpha = 1;
   ctx.restore();
 
-  minimap(ctx, s, bins, cssW);
+  const mapW = Math.min(170, cssW * 0.28);
+  minimap(ctx, s, bins, cssW - mapW - 10, 10, mapW);
+}
+
+/** Draws only the map onto its own small canvas. The 3D view lays it over the scene. */
+export function paintMinimap(
+  canvas: HTMLCanvasElement,
+  s: PaintState,
+  bins: PaintBin[],
+) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const w = Math.max(40, canvas.clientWidth - 8);
+  const h = (WORLD_H / WORLD_W) * w;
+  const pixelW = Math.floor((w + 8) * dpr);
+  const pixelH = Math.floor((h + 8) * dpr);
+  if (canvas.width !== pixelW || canvas.height !== pixelH) {
+    canvas.width = pixelW;
+    canvas.height = pixelH;
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w + 8, h + 8);
+  minimap(ctx, s, bins, 4, 4, w);
+}
+
+/**
+ * Everything that lies flat: grass, roads, the park lawn, patio, school yard,
+ * and depot pad. The 3D view uses this as the ground texture and builds the
+ * upright things as real shapes.
+ */
+export function paintGround(ctx: Ctx) {
+  const p = pats(ctx);
+  ctx.fillStyle = p.grass ?? "#8cbf6e";
+  ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+  roads(ctx);
+
+  // park lawn, path, and the pond bank
+  ctx.fillStyle = p.park ?? "#9ccf7c";
+  rr(ctx, 40, 40, 780, 560, 36);
+  ctx.fill();
+  ctx.strokeStyle = "#6fa75a";
+  ctx.lineWidth = 10;
+  ctx.stroke();
+  ctx.strokeStyle = "#e8d6ad";
+  ctx.lineWidth = 30;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(70, 590);
+  ctx.bezierCurveTo(260, 420, 300, 140, 800, 80);
+  ctx.stroke();
+  ctx.lineCap = "butt";
+  ellipse(ctx, 430, 300, 86, 58, "#c9b98f");
+  const beds: [number, number, string][] = [
+    [120, 300, "f1"],
+    [700, 330, "f2"],
+    [300, 560, "f3"],
+    [1400, 620, "g1"],
+    [2100, 560, "g2"],
+    [160, 1090, "h1"],
+    [600, 1092, "h2"],
+    [1250, 1250, "g3"],
+    [640, 1300, "g4"],
+  ];
+  for (const [fx, fy, seed] of beds) flowers(ctx, fx, fy, seed);
+
+  // cafe patio
+  ctx.fillStyle = "#eadcc4";
+  ctx.fillRect(1040, 168, 400, 150);
+  ctx.strokeStyle = "rgba(0,0,0,0.07)";
+  ctx.lineWidth = 2;
+  for (let x = 1040; x <= 1440; x += 30) {
+    ctx.beginPath();
+    ctx.moveTo(x, 168);
+    ctx.lineTo(x, 318);
+    ctx.stroke();
+  }
+  for (let y = 168; y <= 318; y += 30) {
+    ctx.beginPath();
+    ctx.moveTo(1040, y);
+    ctx.lineTo(1440, y);
+    ctx.stroke();
+  }
+
+  // school yard with a court
+  ctx.fillStyle = "#676c73";
+  rr(ctx, 1620, 140, 560, 240, 14);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,0.8)";
+  ctx.lineWidth = 3;
+  ctx.strokeRect(1860, 180, 280, 170);
+  ctx.beginPath();
+  ctx.moveTo(2000, 180);
+  ctx.lineTo(2000, 350);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(2000, 265, 30, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.strokeStyle = "#facc15";
+  for (let i = 0; i < 6; i += 1)
+    ctx.strokeRect(1660 + (i % 2) * 34, 300 - Math.floor(i / 2) * 34, 30, 30);
+
+  // front paths for the homes
+  ctx.fillStyle = "#d9d3c7";
+  ctx.fillRect(150, 1022, 692, 26);
+  for (const [hx, hw] of HOUSES) ctx.fillRect(hx + hw / 2 - 13, 990, 26, 34);
+
+  // depot pad
+  ctx.fillStyle = "#cdd3d1";
+  rr(ctx, 1580, 980, 760, 420, 24);
+  ctx.fill();
+  ctx.save();
+  rr(ctx, 1580, 980, 760, 16, 8);
+  ctx.clip();
+  for (let x = 1560; x < 2360; x += 28) {
+    ctx.fillStyle = "#facc15";
+    ctx.beginPath();
+    ctx.moveTo(x, 996);
+    ctx.lineTo(x + 14, 980);
+    ctx.lineTo(x + 28, 980);
+    ctx.lineTo(x + 14, 996);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+  ctx.strokeStyle = "rgba(255,255,255,0.8)";
+  ctx.lineWidth = 3;
+  for (const x of [1680, 1860, 2060, 2260]) {
+    ctx.beginPath();
+    ctx.moveTo(x, 1250);
+    ctx.lineTo(x, 1330);
+    ctx.stroke();
+  }
 }

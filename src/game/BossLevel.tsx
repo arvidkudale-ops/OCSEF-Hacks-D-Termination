@@ -13,6 +13,14 @@ import { ComboBadge, ItemCard } from "./GameBits";
 import type { Fx } from "./GameBits";
 import { bossQueue } from "./pools";
 import { BinButton, BinGrid, MonsterArena, SceneBanner } from "./art";
+import type { MonsterMood } from "./art";
+import { Stage3D } from "./three/Stage3D";
+import type { StageEvent } from "./three/stage";
+
+const STAGE_BINS = CATEGORY_ORDER.map((category) => ({
+  id: category as string,
+  label: CATEGORY_META[category].label,
+}));
 
 const WAVE_SIZE = 4;
 
@@ -57,6 +65,7 @@ export function BossLevel({
   const [awaitContinue, setAwaitContinue] = useState(false);
   const [won, setWon] = useState(false);
   const [fx, setFx] = useState<Fx | null>(null);
+  const [stageEvent, setStageEvent] = useState<StageEvent | null>(null);
   const [, force] = useState(0);
   const tally = useRef(newTally());
   const retry = useRef(false);
@@ -71,7 +80,9 @@ export function BossLevel({
   const shield = 1 - cleared / queue.length;
   function choose(category: DisposalCategory) {
     if (!item || awaitContinue || won || paused) return;
-    if (item.category === category) {
+    const ok = item.category === category;
+    setStageEvent((prev) => ({ n: (prev?.n ?? 0) + 1, ok, binId: category }));
+    if (ok) {
       const earned = hit(tally.current, 0, retry.current ? RETRY_POINTS : 100);
       recordAnswer(item.id, true);
       retry.current = false;
@@ -148,6 +159,34 @@ export function BossLevel({
   }, []);
 
   const remainingBits = queue.slice(cleared, cleared + 10);
+  const mood: MonsterMood = won
+    ? "defeated"
+    : fx && fx.ok
+      ? "hurt"
+      : shield < 0.34
+        ? "tired"
+        : "angry";
+  /** Flat monster, shown only when the browser cannot draw the 3D arena. */
+  const flatArena = (
+    <MonsterArena
+      shield={shield}
+      mood={mood}
+      fxKey={fx?.n ?? 0}
+      fxClass={fx ? (fx.ok ? "fx-flash" : "fx-grow") : ""}
+      bits={remainingBits.map((id, bitIndex) => {
+        const [left, top] = BIT_SLOTS[bitIndex % BIT_SLOTS.length];
+        return (
+          <span
+            key={id}
+            className="monster-bit shadow"
+            style={{ left: `calc(${left}% - 1rem)`, top: `calc(${top}% - 1rem)` }}
+          >
+            {getItem(id)?.emoji}
+          </span>
+        );
+      })}
+    />
+  );
 
   return (
     <GameChrome
@@ -170,7 +209,12 @@ export function BossLevel({
     >
       {!started ? (
         <div className="overflow-hidden rounded-3xl bg-white ring-1 ring-forest-900/10">
-          <SceneBanner levelId="boss" className="h-40 sm:h-48" />
+          <Stage3D
+            theme="boss"
+            className="h-56 sm:h-72"
+            bits={queue.slice(0, 10).map((id) => getItem(id)?.emoji ?? "♻️")}
+            fallback={<SceneBanner levelId="boss" className="h-40 sm:h-48" />}
+          />
           <div className="p-6">
           <p className="text-sm leading-6 text-ink-soft">
             This monster is built from {queue.length} pieces of badly sorted waste. There is nothing to hit. Each correct sort
@@ -188,24 +232,18 @@ export function BossLevel({
         </div>
       ) : (
         <div className="rounded-3xl bg-[#e7f0df] p-4 ring-1 ring-forest-900/10">
-          <MonsterArena
+          <Stage3D
+            theme="boss"
+            className="h-72 rounded-3xl sm:h-96"
+            bins={STAGE_BINS}
+            emoji={item && !won ? item.emoji : null}
+            itemKey={index}
+            event={stageEvent}
             shield={shield}
-            mood={won ? "defeated" : fx && fx.ok ? "hurt" : shield < 0.34 ? "tired" : "angry"}
-            fxKey={fx?.n ?? 0}
-            fxClass={fx ? (fx.ok ? "fx-flash" : "fx-grow") : ""}
-            bits={remainingBits.map((id, bitIndex) => {
-              // Stuck in the monster's goo, around (not over) its face.
-              const [left, top] = BIT_SLOTS[bitIndex % BIT_SLOTS.length];
-              return (
-                <span
-                  key={id}
-                  className="monster-bit shadow"
-                  style={{ left: `calc(${left}% - 1rem)`, top: `calc(${top}% - 1rem)` }}
-                >
-                  {getItem(id)?.emoji}
-                </span>
-              );
-            })}
+            mood={mood}
+            bits={remainingBits.map((id) => getItem(id)?.emoji ?? "♻️")}
+            onChoose={(binId) => choose(binId as DisposalCategory)}
+            fallback={flatArena}
           />
           <div className="mx-auto mt-4 flex max-w-xs items-center justify-between text-sm font-extrabold text-forest-900">
             <span>Pollution shield</span>
