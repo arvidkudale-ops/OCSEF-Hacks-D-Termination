@@ -152,10 +152,7 @@ export function HomePage() {
             Recent scans
           </h2>
           {state.scans.length === 0 ? (
-            <p className="mt-2 text-sm text-ink-soft">
-              No scans yet. The scanner starts in demo mode when no recognition
-              service is configured.
-            </p>
+            <p className="mt-2 text-sm text-ink-soft">No scans yet.</p>
           ) : (
             <ul className="mt-3 space-y-2">
               {state.scans.slice(0, 4).map((scan) => {

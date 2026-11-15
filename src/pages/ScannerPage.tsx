@@ -199,7 +199,7 @@ export function ScannerPage() {
         null,
         acceptsImages
           ? "Add a photo first, or choose the item yourself."
-          : "Demo mode is open. Choose the item yourself. The photo was not uploaded.",
+          : "Choose the item yourself. The photo was not uploaded.",
       );
       return;
     }
@@ -261,7 +261,7 @@ export function ScannerPage() {
     } catch {
       openPicker(
         null,
-        "Gemini did not respond in time. Demo mode is open, and the photo was not saved.",
+        "Gemini did not respond in time. Choose the item yourself. The photo was not saved.",
       );
     } finally {
       window.clearTimeout(timer);
@@ -317,7 +317,7 @@ export function ScannerPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow={acceptsImages ? "Gemini" : "Demo mode"}
+        eyebrow={acceptsImages ? "Gemini" : "Scanner"}
         title="Waste scanner"
         description={
           acceptsImages
@@ -325,12 +325,12 @@ export function ScannerPage() {
             : "Add a photo for your own reference, then identify the item yourself. This build does not analyze pictures or upload them."
         }
       />
-      <DemoNote>
-        {acceptsImages
-          ? serviceNote ||
-            "Gemini is configured. Identify sends the photo to Google. ReLeaf does not store it."
-          : "No image-recognition service is configured. A file name can suggest an item, and that suggestion is labeled as a hint. It is not a scan of the picture."}
-      </DemoNote>
+      {acceptsImages ? (
+        <DemoNote>
+          {serviceNote ||
+            "Gemini is configured. Identify sends the photo to Google. ReLeaf does not store it."}
+        </DemoNote>
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <Card>

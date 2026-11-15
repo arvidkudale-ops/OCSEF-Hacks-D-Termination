@@ -17,16 +17,16 @@ import { cx } from "../lib/cx";
 /** Sidebar and mobile menu entries, in the order they should be read. */
 const NAV = [
   { to: "/", label: "Home", icon: Home, end: true },
-  { to: "/scanner", label: "Waste Scanner", icon: Recycle, end: false },
-  { to: "/database", label: "Waste Database", icon: Leaf, end: false },
-  { to: "/centers", label: "Recycling Centers", icon: MapPin, end: false },
-  { to: "/impact", label: "Environmental Impact", icon: Sprout, end: false },
   {
     to: "/adventure",
     label: "Recycling Adventure",
     icon: Gamepad2,
     end: false,
   },
+  { to: "/scanner", label: "Waste Scanner", icon: Recycle, end: false },
+  { to: "/database", label: "Waste Database", icon: Leaf, end: false },
+  { to: "/centers", label: "Recycling Centers", icon: MapPin, end: false },
+  { to: "/impact", label: "Environmental Impact", icon: Sprout, end: false },
   { to: "/settings", label: "Settings", icon: Settings, end: false },
 ];
 
@@ -149,7 +149,7 @@ export function Layout() {
           <p className="mt-auto text-xs leading-5 text-ink-soft">
             {state.zip ? `ZIP ${state.zip}` : "No ZIP saved"}
             <br />
-            Educational demo. Local rules win.
+            Local rules win.
           </p>
         </aside>
         <div className="min-w-0 overflow-x-clip">
@@ -167,8 +167,8 @@ export function Layout() {
           </main>
           <footer className="mx-auto w-full max-w-6xl px-4 pb-8 text-xs leading-5 text-ink-soft md:px-8">
             <p>
-              ReLeaf is an educational demo. Sample facilities are not real
-              drop-off sites. Game actions are not counted as real recycling.
+              Sample facilities are not real drop-off sites. Game actions are
+              not counted as real recycling.
             </p>
             <p className="mt-2">
               Built by Veeram Dugar, Arvid Kudale, and Vince Nguyen
