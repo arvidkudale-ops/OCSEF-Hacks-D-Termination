@@ -24,6 +24,10 @@ export const BIN_LOOKS: Record<string, BinLook> = {
   metal: { body: "#64748b", lid: "#334155", symbol: "🥫" },
   glass: { body: "#15803d", lid: "#14532d", symbol: "🍾" },
   out: { body: "#991b1b", lid: "#7f1d1d", symbol: "🚫" },
+  yes: { body: "#1e40af", lid: "#1e3a8a", symbol: "✅" },
+  no: { body: "#991b1b", lid: "#7f1d1d", symbol: "🚫" },
+  greens: { body: "#2d6a4f", lid: "#1b4332", symbol: "🥬" },
+  browns: { body: "#a16207", lid: "#713f12", symbol: "🍂" },
 };
 
 export function binLook(id: string): BinLook {

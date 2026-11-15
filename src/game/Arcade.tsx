@@ -14,6 +14,13 @@ import { ComboBadge, ItemCard, MissedList } from "./GameBits";
 import type { Fx } from "./GameBits";
 import { dailyItems, reviewItems, rushPicker } from "./pools";
 import { BinButton, BinGrid, SceneBanner } from "./art";
+import { Stage3D } from "./three/Stage3D";
+import type { StageEvent } from "./three/stage";
+
+const STAGE_BINS = CATEGORY_ORDER.map((category) => ({
+  id: category as string,
+  label: CATEGORY_META[category].label,
+}));
 
 const BANNER = {
   rush: "sorting",
@@ -64,6 +71,7 @@ export function Arcade({ mode }: { mode: ArcadeMode }) {
   } | null>(null);
   const [awaitContinue, setAwaitContinue] = useState(false);
   const [fx, setFx] = useState<Fx | null>(null);
+  const [stageEvent, setStageEvent] = useState<StageEvent | null>(null);
   const [grid, setGrid] = useState<string[]>([]);
   const [summary, setSummary] = useState<{
     score: number;
@@ -139,6 +147,7 @@ export function Arcade({ mode }: { mode: ArcadeMode }) {
   function choose(category: DisposalCategory) {
     if (!item || phase !== "play" || paused || awaitContinue) return;
     const ok = item.category === category;
+    setStageEvent((prev) => ({ n: (prev?.n ?? 0) + 1, ok, binId: category }));
     const label = CATEGORY_META[item.category].label.toLowerCase();
     if (ok) {
       const earned = hit(tally.current, 0, retry.current ? RETRY_POINTS : 100);
@@ -261,7 +270,13 @@ export function Arcade({ mode }: { mode: ArcadeMode }) {
     >
       {phase === "intro" ? (
         <div className="overflow-hidden rounded-3xl bg-white ring-1 ring-forest-900/10">
-          <SceneBanner levelId={BANNER[mode]} className="h-32 sm:h-40" />
+          <Stage3D
+            theme={BANNER[mode]}
+            className="h-48 sm:h-64"
+            fallback={
+              <SceneBanner levelId={BANNER[mode]} className="h-32 sm:h-40" />
+            }
+          />
           <div className="p-6">
             <p className="text-sm leading-6 text-ink-soft">{info.intro}</p>
             {mode === "rush" && state.game.rushBest > 0 ? (
@@ -307,8 +322,17 @@ export function Arcade({ mode }: { mode: ArcadeMode }) {
           </div>
         </div>
       ) : (
-        <div className="rounded-3xl bg-[#eef3e6] p-4 ring-1 ring-forest-900/10">
-          <div className="mx-auto max-w-xl space-y-3">
+        <div className="overflow-hidden rounded-3xl bg-[#eef3e6] ring-1 ring-forest-900/10">
+          <Stage3D
+            theme={BANNER[mode]}
+            className="h-60 sm:h-72"
+            bins={STAGE_BINS}
+            emoji={item?.emoji ?? null}
+            itemKey={index}
+            event={stageEvent}
+            onChoose={(binId) => choose(binId as DisposalCategory)}
+          />
+          <div className="mx-auto max-w-xl space-y-3 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <ComboBadge combo={tally.current.combo} />
               {mode === "daily" ? (

@@ -12,6 +12,8 @@ import { GameChrome } from "./GameChrome";
 import { ComboBadge, ItemCard } from "./GameBits";
 import type { Fx } from "./GameBits";
 import { BinButton, BinGrid, SceneBanner } from "./art";
+import { Stage3D } from "./three/Stage3D";
+import type { StageBin, StageEvent } from "./three/stage";
 
 /** Shuffle what can be shuffled so a replay is not a memory test. */
 function prepare(task: GameTask): GameTask {
@@ -63,6 +65,7 @@ export function TaskPlayer({
   } | null>(null);
   const [awaitContinue, setAwaitContinue] = useState(false);
   const [fx, setFx] = useState<Fx | null>(null);
+  const [stageEvent, setStageEvent] = useState<StageEvent | null>(null);
   const [points, setPoints] = useState(0);
   const [mistakes, setMistakes] = useState(0);
   const [combo, setCombo] = useState(0);
@@ -83,7 +86,13 @@ export function TaskPlayer({
     setCombo(tally.current.combo);
   }
 
-  function good(text: string, itemId?: string) {
+  /** Tells the 3D stage what just happened so it can play it. */
+  function show(ok: boolean, binId?: string, emoji?: string) {
+    setStageEvent((prev) => ({ n: (prev?.n ?? 0) + 1, ok, binId, emoji }));
+  }
+
+  function good(text: string, itemId?: string, binId?: string, emoji?: string) {
+    show(true, binId, emoji);
     const earned = hit(tally.current, 0, retrying ? RETRY_POINTS : 100);
     if (itemId) recordAnswer(itemId, true);
     setRetrying(false);
@@ -93,7 +102,8 @@ export function TaskPlayer({
     sync();
   }
 
-  function bad(text: string, itemId?: string) {
+  function bad(text: string, itemId?: string, binId?: string, emoji?: string) {
+    show(false, binId, emoji);
     miss(tally.current, itemId);
     if (itemId) recordAnswer(itemId, false);
     setRetrying(true);
@@ -147,30 +157,41 @@ export function TaskPlayer({
       good(
         `Correct. ${item?.name ?? "This item"} belongs in ${right?.label}. ${item?.why ?? ""}`,
         round.itemId,
+        binId,
       );
       setAwaitContinue(true);
       return;
     }
-    bad("Not that station. Try another one.", round.itemId);
+    bad("Not that station. Try another one.", round.itemId, binId);
   }
 
   function answerYesNo(belongs: boolean) {
     if (!task || task.kind !== "yesno" || awaitContinue) return;
     const round = task.rounds[step];
     if (belongs === round.belongs) {
-      good(`Correct. ${round.explain}`, round.itemId);
+      good(`Correct. ${round.explain}`, round.itemId, belongs ? "yes" : "no");
       setAwaitContinue(true);
       return;
     }
-    bad("Not quite. Look again and choose once more.", round.itemId);
+    bad(
+      "Not quite. Look again and choose once more.",
+      round.itemId,
+      belongs ? "yes" : "no",
+    );
   }
 
   function addToPile(
     choice: Extract<GameTask, { kind: "build" }>["choices"][number],
   ) {
     if (!task || task.kind !== "build" || awaitContinue) return;
+    const emoji = getItem(choice.itemId)?.emoji;
     if (!choice.pile) {
-      bad("That does not go in the pile. Try something else.", choice.itemId);
+      bad(
+        "That does not go in the pile. Try something else.",
+        choice.itemId,
+        undefined,
+        emoji,
+      );
       return;
     }
     const need = task.need.find((entry) => entry.id === choice.pile);
@@ -184,7 +205,7 @@ export function TaskPlayer({
     }
     const next = { ...counts, [choice.pile]: have + 1 };
     setCounts(next);
-    good(choice.explain, choice.itemId);
+    good(choice.explain, choice.itemId, choice.pile, emoji);
     if (task.need.every((entry) => (next[entry.id] ?? 0) >= entry.count))
       setAwaitContinue(true);
   }
@@ -252,6 +273,31 @@ export function TaskPlayer({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // What the 3D stage shows for the current station.
+  let stageBins: StageBin[] = [];
+  let stageEmoji: string | null = null;
+  let stageSteps: { total: number; done: number } | null = null;
+  if (task?.kind === "sort") stageBins = task.bins;
+  else if (task?.kind === "yesno")
+    stageBins = [
+      { id: "yes", label: task.yesLabel },
+      { id: "no", label: task.noLabel },
+    ];
+  else if (task?.kind === "build")
+    stageBins = task.need.map((need) => ({ id: need.id, label: need.label }));
+  else if (task?.kind === "order")
+    stageSteps = { total: task.steps.length, done: placed.length };
+  else if (task?.kind === "match")
+    stageSteps = { total: task.pairs.length, done: solved.length };
+  if (task?.kind === "sort" || task?.kind === "yesno")
+    stageEmoji = getItem(task.rounds[step].itemId)?.emoji ?? "♻️";
+
+  function chooseOnStage(binId: string) {
+    if (paused) return;
+    if (task?.kind === "sort") chooseBin(binId);
+    else if (task?.kind === "yesno") answerYesNo(binId === "yes");
+  }
+
   const detail = started
     ? `Station ${taskIndex + 1} of ${tasks.length} · ${points} points · ${mistakes} mistakes`
     : "Tutorial for this place";
@@ -279,7 +325,13 @@ export function TaskPlayer({
     >
       {!started || !task ? (
         <div className="overflow-hidden rounded-3xl bg-white ring-1 ring-forest-900/10">
-          <SceneBanner levelId={level.id} className="h-36 sm:h-44" />
+          <Stage3D
+            theme={level.id}
+            className="h-48 sm:h-64"
+            fallback={
+              <SceneBanner levelId={level.id} className="h-36 sm:h-44" />
+            }
+          />
           <div className="p-6">
             <p className="text-sm leading-6 text-ink-soft">{level.summary}</p>
             <p className="mt-2 text-sm font-bold text-forest-900">
@@ -303,7 +355,19 @@ export function TaskPlayer({
         <div
           className={`overflow-hidden rounded-3xl ring-1 ring-forest-900/10 ${backdrop(level.id)}`}
         >
-          <SceneBanner levelId={level.id} className="h-20 sm:h-24" />
+          <Stage3D
+            theme={level.id}
+            className="h-64 sm:h-80"
+            bins={stageBins}
+            emoji={stageEmoji}
+            itemKey={`${taskIndex}-${step}`}
+            event={stageEvent}
+            steps={stageSteps}
+            onChoose={chooseOnStage}
+            fallback={
+              <SceneBanner levelId={level.id} className="h-20 sm:h-24" />
+            }
+          />
           <div className="p-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>

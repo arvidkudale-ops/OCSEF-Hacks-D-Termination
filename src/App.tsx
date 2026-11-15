@@ -1,4 +1,4 @@
-import { Component } from "react";
+import { Component, lazy, Suspense } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 import { BrowserRouter, Link, Route, Routes } from "react-router-dom";
 import { AppProvider } from "./context/AppContext";
@@ -11,7 +11,15 @@ import { ItemPage } from "./pages/ItemPage";
 import { CentersPage } from "./pages/CentersPage";
 import { ImpactPage } from "./pages/ImpactPage";
 import { SettingsPage } from "./pages/SettingsPage";
-import { GamePage } from "./pages/GamePage";
+/** The game brings the 3D engine with it, so it loads only when the game is opened. */
+const GamePage = lazy(() =>
+  import("./pages/GamePage").then((module) => ({ default: module.GamePage })),
+);
+const game = (
+  <Suspense fallback={<p className="text-sm text-ink-soft">Loading the game…</p>}>
+    <GamePage />
+  </Suspense>
+);
 
 interface BoundaryState {
   error: Error | null;
@@ -82,8 +90,8 @@ export default function App() {
               <Route path="database/:itemId" element={<ItemPage />} />
               <Route path="centers" element={<CentersPage />} />
               <Route path="impact" element={<ImpactPage />} />
-              <Route path="adventure" element={<GamePage />} />
-              <Route path="adventure/:levelId" element={<GamePage />} />
+              <Route path="adventure" element={game} />
+              <Route path="adventure/:levelId" element={game} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="*" element={<MissingPage />} />
             </Route>

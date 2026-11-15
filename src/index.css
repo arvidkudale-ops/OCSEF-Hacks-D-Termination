@@ -746,6 +746,50 @@ html.dark .status-bad {
   color: #ffffff;
 }
 
+.victory-stars svg {
+  animation: star-pop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+
+.victory-next {
+  min-height: 3.25rem;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #1b4332;
+  padding: 0.75rem 1.75rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  transition:
+    transform 0.15s ease,
+    background-color 0.15s ease;
+  animation: victory-pulse 1.6s ease-in-out infinite;
+}
+
+.victory-next:hover {
+  transform: translateY(-2px) scale(1.03);
+  background: #d8f3dc;
+}
+
+@keyframes star-pop {
+  from {
+    opacity: 0;
+    transform: scale(0) rotate(-40deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes victory-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(255 255 255 / 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgb(255 255 255 / 0);
+  }
+}
+
 .confetti {
   position: absolute;
   inset: 0;
