@@ -1,0 +1,9 @@
+node_modules
+dist
+.vercel
+
+# Secrets: never commit API keys
+.env
+.env.*
+!.env.example
+env.txt

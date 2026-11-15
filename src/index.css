@@ -1,0 +1,768 @@
+@import "tailwindcss";
+
+/* Shared color and type tokens. Sage and warm paper, matching the logo leaf. */
+@theme {
+  --font-sans: "Nunito", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --color-forest-950: #1b4332;
+  --color-forest-900: #1b4332;
+  --color-forest-800: #2d6a4f;
+  --color-leaf-700: #40916c;
+  --color-leaf-600: #52b788;
+  --color-leaf-500: #95d5b2;
+  --color-leaf-300: #b7e4c7;
+  --color-leaf-100: #d8f3dc;
+  --color-cream-50: #f7f6f2;
+  --color-cream-100: #e9f5ee;
+  --color-ink: #1b4332;
+  --color-ink-soft: #52796f;
+}
+
+html {
+  color-scheme: dark;
+}
+
+html:not(.dark) {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  background: var(--color-cream-50);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 3px solid #2d6a4f;
+  outline-offset: 2px;
+}
+
+/* The pointer is the same leaf as the logo. Text fields keep the writing cursor. */
+*,
+*::before,
+*::after {
+  cursor:
+    url("/cursor-leaf.png") 16 6,
+    auto;
+}
+
+input,
+textarea,
+select,
+[contenteditable="true"] {
+  cursor: text;
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -4rem;
+  z-index: 80;
+  border-radius: 999px;
+  background: white;
+  padding: 0.6rem 1rem;
+  font-weight: 800;
+}
+
+.skip-link:focus {
+  top: 1rem;
+}
+
+.facility-map {
+  height: 22rem;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 1.5rem;
+  background: #d8f3dc;
+}
+
+.facility-map .leaflet-container {
+  height: 100%;
+  width: 100%;
+  font-family: inherit;
+  background: #d8f3dc;
+}
+
+.leaflet-container img {
+  max-width: none !important;
+  max-height: none !important;
+}
+
+.facility-pin {
+  background: transparent !important;
+  border: none !important;
+}
+
+.monster {
+  position: relative;
+  width: min(220px, 70vw);
+  height: 168px;
+  margin: 0 auto;
+  border-radius: 46% 46% 42% 42%;
+  background: radial-gradient(circle at 50% 28%, #7d9a78, #1b4332 72%);
+  box-shadow: inset 0 -18px 0 rgba(0, 0, 0, 0.12);
+}
+
+.monster-bit {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #f7f6f2;
+  font-size: 0.95rem;
+}
+
+.monster-tired {
+  filter: saturate(0.7);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .monster-tired {
+    transform: scale(0.94);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Game feedback. The reduced-motion rule above shortens these to nothing. */
+@keyframes fx-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes fx-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-8px);
+  }
+  40% {
+    transform: translateX(8px);
+  }
+  60% {
+    transform: translateX(-5px);
+  }
+  80% {
+    transform: translateX(5px);
+  }
+}
+
+@keyframes fx-float {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -34px);
+  }
+}
+
+@keyframes fx-wobble {
+  0%,
+  100% {
+    transform: rotate(0) scale(1);
+  }
+  25% {
+    transform: rotate(-4deg) scale(0.97);
+  }
+  75% {
+    transform: rotate(4deg) scale(0.97);
+  }
+}
+
+@keyframes fx-grow {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+.fx-pop {
+  animation: fx-pop 0.35s ease-out;
+}
+.fx-shake {
+  animation: fx-shake 0.4s ease-in-out;
+}
+.fx-float {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  pointer-events: none;
+  animation: fx-float 1s ease-out forwards;
+}
+.monster.fx-wobble {
+  animation: fx-wobble 0.45s ease-in-out;
+}
+.monster.fx-grow {
+  animation: fx-grow 0.45s ease-in-out;
+}
+
+.monster-bit {
+  width: 2rem;
+  height: 2rem;
+  transition:
+    opacity 0.4s,
+    transform 0.4s;
+}
+
+/* ---------- Game art ---------- */
+.bin-btn {
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+.bin-btn:hover:not(:disabled) {
+  --tw-ring-color: var(--bin-ring);
+}
+.bin-icon .bin-lid {
+  transform-box: fill-box;
+  transform-origin: 0% 100%;
+  transition: transform 0.2s ease-out;
+}
+.bin-btn:hover:not(:disabled) .bin-lid,
+.bin-btn:focus-visible .bin-lid {
+  transform: rotate(-24deg);
+}
+
+@keyframes belt {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+@keyframes belt-items {
+  from {
+    transform: translateX(-90px);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes arm-swing {
+  0%,
+  100% {
+    transform: rotate(-12deg);
+  }
+  50% {
+    transform: rotate(12deg);
+  }
+}
+@keyframes steam {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  40% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+}
+@keyframes worm {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(10px);
+  }
+}
+@keyframes smoke {
+  0% {
+    opacity: 0.8;
+    transform: translate(0, 0) scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(22px, -16px) scale(1.8);
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes drip {
+  0%,
+  100% {
+    transform: scaleY(0.6);
+  }
+  50% {
+    transform: scaleY(1.2);
+  }
+}
+@keyframes blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+@keyframes smog {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(6px, -6px);
+  }
+}
+@keyframes fx-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-40px) rotate(-4deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fx-flash {
+  0% {
+    filter: brightness(2.2);
+  }
+  100% {
+    filter: none;
+  }
+}
+
+.belt-stripes {
+  animation: belt 0.5s linear infinite;
+}
+.belt-items {
+  animation: belt-items 5s linear infinite;
+}
+.arm-swing {
+  animation: arm-swing 2.4s ease-in-out infinite;
+}
+.steam {
+  animation: steam 2.6s ease-out infinite;
+}
+.worm {
+  animation: worm 3s ease-in-out infinite;
+}
+.smoke {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: smoke 2.4s ease-out infinite;
+}
+.gear {
+  animation: spin 6s linear infinite;
+}
+.gear-rev {
+  animation: spin 4s linear infinite reverse;
+}
+.shield-spin {
+  animation: spin 14s linear infinite;
+}
+.drip {
+  transform-box: fill-box;
+  transform-origin: top;
+  animation: drip 2.2s ease-in-out infinite;
+}
+.eye-blink {
+  animation: blink 4.5s infinite;
+}
+.smog {
+  animation: smog 3.5s ease-in-out infinite;
+}
+.fx-enter {
+  animation: fx-enter 0.35s ease-out;
+}
+.fx-flash {
+  animation:
+    fx-flash 0.35s ease-out,
+    fx-wobble 0.45s ease-in-out;
+}
+.fx-grow {
+  animation: fx-grow 0.45s ease-in-out;
+}
+
+/* Conveyor under the current item */
+.belt {
+  height: 14px;
+  border-radius: 999px;
+  background: repeating-linear-gradient(
+    90deg,
+    #4b5563 0 12px,
+    #6b7280 12px 24px
+  );
+  background-size: 24px 100%;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25);
+  animation: belt-bg 0.6s linear infinite;
+}
+@keyframes belt-bg {
+  to {
+    background-position: 24px 0;
+  }
+}
+
+.theme-knob {
+  background: #fff;
+}
+
+/* Soft panels: rounded edges and a light shadow instead of a hard offset. */
+.flat-card,
+.rounded-3xl.bg-white,
+.rounded-3xl.bg-white\/70,
+.rounded-2xl.bg-white,
+.rounded-\[2rem\] {
+  border-radius: 1.5rem;
+  border: 1px solid rgb(27 67 50 / 0.08);
+  box-shadow: 0 12px 32px -20px rgb(27 67 50 / 0.35);
+}
+
+.flat-pop {
+  border: none;
+  box-shadow: 0 8px 18px -12px rgb(27 67 50 / 0.55);
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    background-color 0.16s ease;
+}
+
+.flat-pop:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 22px -12px rgb(27 67 50 / 0.45);
+}
+
+.flat-pop:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 4px 10px -8px rgb(27 67 50 / 0.4);
+}
+
+.flat-nav {
+  border: 1px solid transparent;
+  transition:
+    background-color 0.16s ease,
+    transform 0.16s ease;
+}
+
+.flat-nav:hover {
+  background: #e9f5ee;
+  border-color: transparent;
+}
+
+.flat-nav-active {
+  background: #d8f3dc;
+  color: #1b4332;
+  border: 1px solid transparent;
+  box-shadow: none;
+}
+
+/* Each route remounts this wrapper, so the entrance plays again on every page. */
+.page-stage {
+  position: relative;
+  padding-top: 8px;
+  animation: page-in 0.46s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Next level slides in from the right, as if it were pulled onto the screen. */
+.page-pull {
+  animation: page-pull 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.page-stage::before {
+  content: "";
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 3px;
+  pointer-events: none;
+  background: linear-gradient(90deg, #95d5b2, #d8f3dc 50%, #95d5b2);
+  transform-origin: left center;
+  animation: page-streak 0.62s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes page-in {
+  0% {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes page-pull {
+  0% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes page-streak {
+  0% {
+    opacity: 1;
+    transform: scaleX(0);
+  }
+  65% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(1);
+  }
+}
+
+/* Dark mode keeps the green hero and logo chip, and lightens text on the cream surfaces. */
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background: #101814;
+  color: #f4f1ea;
+}
+
+html.dark .bg-cream-50 {
+  background-color: #101814;
+}
+
+html.dark .bg-cream-50\/95 {
+  background-color: rgb(16 24 20 / 0.95);
+}
+
+html.dark .bg-cream-100,
+html.dark .hover\:bg-cream-100:hover {
+  background-color: #1c2822;
+}
+
+html.dark .bg-white {
+  background-color: #17241d;
+}
+
+html.dark .bg-white\/70 {
+  background-color: rgb(23 36 29 / 0.78);
+}
+
+html.dark .bg-white\/50 {
+  background-color: rgb(16 24 20 / 0.45);
+}
+
+html.dark .text-ink {
+  color: #f4f1ea;
+}
+
+html.dark .text-ink-soft {
+  color: #c9c2b6;
+}
+
+html.dark .text-forest-900 {
+  color: #d8f3dc;
+}
+
+html.dark .text-forest-900\/80 {
+  color: rgb(216 243 220 / 0.82);
+}
+
+html.dark .text-leaf-700 {
+  color: #95d5b2;
+}
+
+html.dark .bg-leaf-100,
+html.dark .hover\:bg-leaf-100:hover {
+  background-color: #1e3a2c;
+}
+
+html.dark .border-forest-900\/5,
+html.dark .border-forest-900\/10,
+html.dark .border-forest-900\/15,
+html.dark .border-forest-900\/20 {
+  border-color: rgb(216 243 220 / 0.16);
+}
+
+html.dark .ring-forest-900\/10 {
+  --tw-ring-color: rgb(216 243 220 / 0.14);
+}
+
+html.dark .bg-amber-50 {
+  background-color: #3a2a12;
+}
+
+html.dark .text-amber-950,
+html.dark .text-amber-800 {
+  color: #fde68a;
+}
+
+html.dark .border-amber-300 {
+  border-color: #92400e;
+}
+
+html.dark .bg-red-50 {
+  background-color: #3f1d1d;
+}
+
+html.dark .text-red-900 {
+  color: #fecaca;
+}
+
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #101814;
+  color: #f4f1ea;
+}
+
+html.dark .theme-knob {
+  background: #f7f6f2;
+}
+
+html.dark .flat-card,
+html.dark .rounded-3xl.bg-white,
+html.dark .rounded-3xl.bg-white\/70,
+html.dark .rounded-2xl.bg-white,
+html.dark .rounded-\[2rem\] {
+  border-color: rgb(149 213 178 / 0.16);
+  box-shadow: 0 14px 32px -18px rgb(0 0 0 / 0.55);
+}
+
+html.dark .flat-nav:hover {
+  background: #1e3a2c;
+  border-color: transparent;
+}
+
+html.dark .flat-nav-active {
+  background: #1e3a2c;
+  color: #d8f3dc;
+  box-shadow: none;
+}
+
+html.dark .flat-pop {
+  box-shadow: 0 10px 22px -14px rgb(0 0 0 / 0.65);
+}
+
+/* Side buttons stay light, so their dark lettering does not disappear. */
+html.dark .flat-pop.bg-white,
+html.dark button.bg-white.text-forest-900,
+html.dark .bin-btn,
+html.dark button.bg-transparent.text-forest-900 {
+  background-color: #f7f6f2;
+  color: #1b4332;
+}
+
+html.dark .flat-pop.bg-white:hover,
+html.dark button.bg-white.text-forest-900:hover,
+html.dark .bin-btn:hover {
+  background-color: #d8f3dc;
+  color: #1b4332;
+}
+
+html.dark .bin-btn .text-forest-900,
+html.dark .bin-btn .text-ink-soft {
+  color: #10241c;
+}
+
+html.dark .bin-btn .bg-cream-100 {
+  background-color: #e5f6ea;
+  color: #10241c;
+}
+
+/* Wrong-answer bar: light letters on a solid red, in both themes. */
+.status-bad {
+  background: #fecaca;
+  color: #450a0a;
+}
+
+html.dark .status-bad {
+  background: #be123c;
+  color: #fff7f7;
+}
+
+.game-over {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.game-over h2,
+.game-over p {
+  color: #ffffff;
+}
+
+.game-over-btn {
+  min-height: 2.75rem;
+  border-radius: 0.5rem;
+  border: 2px solid #ffffff;
+  padding: 0.5rem 1rem;
+  font-weight: 800;
+}
+
+.game-over-btn-light {
+  background: #ffffff;
+  color: #7f1d1d;
+}
+
+.game-over-btn-line {
+  background: transparent;
+  color: #ffffff;
+}
+
+.you-won {
+  background: #2d6a4f;
+  color: #ffffff;
+}
+
+.you-won h1,
+.you-won > p {
+  color: #ffffff;
+}
+
+.confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.confetti span {
+  position: absolute;
+  top: -16px;
+  width: 10px;
+  height: 16px;
+  animation: confetti-fall 1.8s linear infinite;
+}
+
+@keyframes confetti-fall {
+  to {
+    transform: translateY(70vh) rotate(540deg);
+  }
+}
