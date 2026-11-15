@@ -60,7 +60,7 @@ class AppErrorBoundary extends Component<
 function MissingPage() {
   return (
     <EmptyState title="Page not found">
-      <p>That page is not part of ReLeaf.</p>
+      <p>That page is not part of D-Trashify.</p>
       <Link className={`${buttonClass()} mt-4`} to="/">
         Back to the dashboard
       </Link>

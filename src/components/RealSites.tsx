@@ -120,7 +120,7 @@ export function RealSitesPanel({
           ) : null}
         </div>
         <p className="text-xs text-ink-soft">
-          Searching sends an approximate point (not your address) to the public OpenStreetMap Overpass service. ReLeaf does not save it.
+          Searching sends an approximate point (not your address) to the public OpenStreetMap Overpass service. D-Trashify does not save it.
         </p>
         {status ? (
           <p className="text-sm text-ink-soft" role="status">
@@ -148,7 +148,7 @@ export function RealSitesPanel({
 
       {shown.length > 0 ? (
         <>
-          <DemoNote>Live community data. Not checked by ReLeaf. Confirm with the operator before dropping anything off.</DemoNote>
+          <DemoNote>Live community data. Not checked by D-Trashify. Confirm with the operator before dropping anything off.</DemoNote>
           <ul className="grid gap-3 lg:grid-cols-2">
             {shown.slice(0, 40).map((site) => {
               const website = safeUrl(site.website)

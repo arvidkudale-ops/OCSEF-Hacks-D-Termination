@@ -391,7 +391,7 @@ function ArcadeResults({
   const [copied, setCopied] = useState("");
   const info = ARCADE_INFO[mode];
   const newBest = mode === "rush" && summary.score > summary.prevBest;
-  const shareText = `ReLeaf Daily ${today}\n${grid.join("")}\n${summary.score} points · ${summary.streak}-day streak`;
+  const shareText = `D-Trashify Daily ${today}\n${grid.join("")}\n${summary.score} points · ${summary.streak}-day streak`;
 
   async function share() {
     try {

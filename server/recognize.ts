@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { WASTE_ITEMS } from "../src/data/items";
+import { WASTE_ITEMS } from "../src/data/items.js";
 
 const MAX_BODY_BYTES = 4_500_000;
 const CONFIDENT = 0.72;
@@ -55,7 +55,7 @@ export function statusFor(apiKey: string): RecognitionStatus {
     acceptsImages: true,
     provider: "gemini",
     reason:
-      "Gemini is configured on this server. Identify sends the photo to Google to match an item in the database. ReLeaf does not store the photo.",
+      "Gemini is configured on this server. Identify sends the photo to Google to match an item in the database. D-Trashify does not store the photo.",
   };
 }
 

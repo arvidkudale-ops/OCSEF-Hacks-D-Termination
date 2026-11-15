@@ -321,14 +321,14 @@ export function ScannerPage() {
         title="Waste scanner"
         description={
           acceptsImages
-            ? "Add a photo, then identify it. A confident match comes from Gemini. A weak match asks you to confirm. ReLeaf does not store the picture."
+            ? "Add a photo, then identify it. A confident match comes from Gemini. A weak match asks you to confirm. D-Trashify does not store the picture."
             : "Add a photo for your own reference, then identify the item yourself. This build does not analyze pictures or upload them."
         }
       />
       {acceptsImages ? (
         <DemoNote>
           {serviceNote ||
-            "Gemini is configured. Identify sends the photo to Google. ReLeaf does not store it."}
+            "Gemini is configured. Identify sends the photo to Google. D-Trashify does not store it."}
         </DemoNote>
       ) : null}
 
@@ -336,7 +336,7 @@ export function ScannerPage() {
         <Card>
           <h2 className="font-display text-2xl text-forest-900">Photo</h2>
           <p className="mt-1 text-sm leading-6 text-ink-soft">
-            ReLeaf does not store the picture. Identify sends it to Gemini only
+            D-Trashify does not store the picture. Identify sends it to Gemini only
             when recognition is turned on.
           </p>
           {error ? (
@@ -483,7 +483,7 @@ export function ScannerPage() {
               </div>
               <p className="mt-2 text-sm text-ink-soft">
                 {acceptsImages
-                  ? "Sending the photo to Gemini. ReLeaf does not keep a copy."
+                  ? "Sending the photo to Gemini. D-Trashify does not keep a copy."
                   : "Checking whether a recognition service is available. Your photo is not being uploaded."}
               </p>
             </div>
@@ -578,7 +578,7 @@ export function ScannerPage() {
           {stage.name === "outside" ? (
             <div className="space-y-4">
               <p className="text-sm font-extrabold uppercase tracking-wide text-amber-800">
-                Not in the ReLeaf database
+                Not in the D-Trashify database
               </p>
               <h2 className="font-display text-3xl text-forest-900">
                 Looks like: {stage.guess.name}

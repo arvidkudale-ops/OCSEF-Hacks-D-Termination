@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { attachRecognition } from "../server/recognize";
+import { attachRecognition } from "../server/recognize.js";
 
 /**
  * Shared entry for the deployed serverless functions (Vercel's /api folder).

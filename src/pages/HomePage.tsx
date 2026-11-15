@@ -34,7 +34,7 @@ export function HomePage() {
           Know where it goes.
         </h1>
         <p className="mt-3 max-w-2xl text-base leading-7 text-cream-50/90">
-          ReLeaf is two tools in one place: a scanner and database for real
+          D-Trashify is two tools in one place: a scanner and database for real
           household waste, and a short adventure that shows what happens after
           the truck leaves.
         </p>

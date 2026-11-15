@@ -1,6 +1,6 @@
-# ReLeaf
+# D-Trashify
 
-ReLeaf is an educational waste-sorting app with two connected parts:
+D-Trashify is an educational waste-sorting app with two connected parts:
 
 - A scanner, database, local-rules notes, sample facility directory, and impact log for real household items.
 - A five-level Recycling Adventure that teaches the same categories through play, plus quick-play modes (Daily Challenge, Sort Rush, Review Pile).

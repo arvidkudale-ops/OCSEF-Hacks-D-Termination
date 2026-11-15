@@ -55,15 +55,15 @@ export function Layout() {
     )
       return;
     const titles: Record<string, string> = {
-      "/": "ReLeaf",
-      "/scanner": "Waste scanner · ReLeaf",
-      "/database": "Waste database · ReLeaf",
-      "/centers": "Recycling centers · ReLeaf",
-      "/impact": "Environmental impact · ReLeaf",
-      "/adventure": "Recycling adventure · ReLeaf",
-      "/settings": "Settings · ReLeaf",
+      "/": "D-Trashify",
+      "/scanner": "Waste scanner · D-Trashify",
+      "/database": "Waste database · D-Trashify",
+      "/centers": "Recycling centers · D-Trashify",
+      "/impact": "Environmental impact · D-Trashify",
+      "/adventure": "Recycling adventure · D-Trashify",
+      "/settings": "Settings · D-Trashify",
     };
-    document.title = titles[location.pathname] ?? "ReLeaf";
+    document.title = titles[location.pathname] ?? "D-Trashify";
     if (!location.hash) window.scrollTo(0, 0);
   }, [location.pathname, location.hash]);
 
@@ -105,7 +105,7 @@ export function Layout() {
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-forest-900 text-leaf-300">
             <Leaf aria-hidden size={18} />
           </span>
-          ReLeaf
+          D-Trashify
         </NavLink>
         <button
           className="grid h-11 w-11 place-items-center rounded-2xl bg-white ring-1 ring-forest-900/10"
@@ -128,7 +128,7 @@ export function Layout() {
             className="h-full w-72 overflow-auto bg-cream-50 p-4"
             onMouseDown={(event) => event.stopPropagation()}
           >
-            <p className="mb-3 font-display text-2xl text-forest-900">ReLeaf</p>
+            <p className="mb-3 font-display text-2xl text-forest-900">D-Trashify</p>
             {nav}
           </div>
         </div>
@@ -143,7 +143,7 @@ export function Layout() {
             <span className="grid h-10 w-10 place-items-center rounded-2xl bg-forest-900 text-leaf-300">
               <Leaf aria-hidden size={20} />
             </span>
-            ReLeaf
+            D-Trashify
           </NavLink>
           {nav}
           <p className="mt-auto text-xs leading-5 text-ink-soft">

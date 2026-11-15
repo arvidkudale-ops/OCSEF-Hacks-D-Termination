@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { handle } from "./_handler";
+import { handle } from "./_handler.js";
 
 export const config = { maxDuration: 30 };
 

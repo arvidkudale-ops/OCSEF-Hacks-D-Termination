@@ -31,10 +31,10 @@ export function GamePage() {
     const arcade =
       levelId && isArcadeMode(levelId) ? ARCADE_INFO[levelId] : undefined;
     document.title = level
-      ? `${level.title} · ReLeaf`
+      ? `${level.title} · D-Trashify`
       : arcade
-        ? `${arcade.title} · ReLeaf`
-        : "Recycling adventure · ReLeaf";
+        ? `${arcade.title} · D-Trashify`
+        : "Recycling adventure · D-Trashify";
   }, [levelId]);
   if (!levelId) return <LevelSelect />;
   if (isArcadeMode(levelId)) return <Arcade key={levelId} mode={levelId} />;

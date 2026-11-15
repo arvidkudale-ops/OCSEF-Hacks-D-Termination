@@ -13,7 +13,7 @@ export function ItemPage() {
 
   useEffect(() => {
     if (!item) return;
-    document.title = `${item.name} · ReLeaf`;
+    document.title = `${item.name} · D-Trashify`;
     viewItem(item.id);
   }, [item, viewItem]);
 
