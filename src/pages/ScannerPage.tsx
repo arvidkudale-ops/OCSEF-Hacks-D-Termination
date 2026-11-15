@@ -15,6 +15,7 @@ import {
 } from "../components/ui";
 
 type ScanMethod = "manual" | "filename-hint" | "recognition";
+const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 
 type Stage =
   | { name: "capture" }
@@ -53,31 +54,30 @@ interface RecognizeBody {
 
 /** Shrinks a chosen image to a JPEG data URL the scanner can preview and send. */
 async function previewFile(file: File) {
-  const dataUrl = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Could not read that file."));
-    reader.onload = () => resolve(String(reader.result));
-    reader.readAsDataURL(file);
-  });
-  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const element = new Image();
-    element.onload = () => resolve(element);
-    element.onerror = () =>
-      reject(
-        new Error(
-          "This browser could not preview that image. Try a JPG or PNG.",
-        ),
-      );
-    element.src = dataUrl;
-  });
-  const scale = Math.min(1, 1280 / Math.max(image.width, image.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(image.width * scale));
-  canvas.height = Math.max(1, Math.round(image.height * scale));
-  const context = canvas.getContext("2d");
-  if (!context) return dataUrl;
-  context.drawImage(image, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL("image/jpeg", 0.85);
+  const sourceUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const element = new Image();
+      element.onload = () => resolve(element);
+      element.onerror = () =>
+        reject(
+          new Error(
+            "This browser could not preview that image. Try a JPG or PNG.",
+          ),
+        );
+      element.src = sourceUrl;
+    });
+    const scale = Math.min(1, 1280 / Math.max(image.width, image.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.width * scale));
+    canvas.height = Math.max(1, Math.round(image.height * scale));
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Could not prepare that image.");
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", 0.85);
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
 }
 
 /** Photo capture, Gemini identify, and the manual item picker. */
@@ -124,6 +124,10 @@ export function ScannerPage() {
     setError("");
     if (!file.type.startsWith("image/")) {
       setError("Choose an image file.");
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      setError("Choose an image smaller than 20 MB.");
       return;
     }
     try {

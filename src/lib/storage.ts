@@ -101,7 +101,8 @@ function cleanDaily(value: unknown): AppState["game"]["daily"] {
   >;
   return {
     lastDay:
-      typeof raw.lastDay === "string" && /^d{4}-d{2}-d{2}$/.test(raw.lastDay)
+      typeof raw.lastDay === "string" &&
+      /^\d{4}-\d{2}-\d{2}$/.test(raw.lastDay)
         ? raw.lastDay
         : "",
     streak: cleanNumber(raw.streak),
@@ -111,70 +112,120 @@ function cleanDaily(value: unknown): AppState["game"]["daily"] {
 }
 
 /** Reads local storage and repairs anything that no longer matches this version. */
+function normalizeState(parsed: Partial<AppState>): AppState {
+  const levels = emptyLevels();
+  const savedLevels = parsed.game?.levels;
+  if (savedLevels) {
+    for (const id of LEVEL_ORDER) {
+      const saved = savedLevels[id];
+      if (!saved) continue;
+      levels[id] = {
+        unlocked: Boolean(saved.unlocked) || id === "neighborhood",
+        completed: Boolean(saved.completed),
+        stars: Math.max(0, Math.min(3, Number(saved.stars) || 0)),
+        bestScore: Math.max(0, Number(saved.bestScore) || 0),
+      };
+    }
+  }
+  const points = LEVEL_ORDER.reduce(
+    (sum, id) => sum + levels[id].bestScore,
+    0,
+  );
+  return {
+    version: 1,
+    displayName:
+      typeof parsed.displayName === "string"
+        ? parsed.displayName.slice(0, 40)
+        : "",
+    zip:
+      typeof parsed.zip === "string" && /^\d{5}$/.test(parsed.zip)
+        ? parsed.zip
+        : "",
+    sound: typeof parsed.sound === "boolean" ? parsed.sound : true,
+    theme: parsed.theme === "light" ? "light" : "dark",
+    scans: cleanScans(parsed.scans),
+    disposals: cleanDisposals(parsed.disposals),
+    viewedItemIds: Array.isArray(parsed.viewedItemIds)
+      ? parsed.viewedItemIds
+          .filter(
+            (id): id is string =>
+              typeof id === "string" && Boolean(getItem(id)),
+          )
+          .slice(0, 100)
+      : [],
+    game: {
+      tutorialSeen: Boolean(parsed.game?.tutorialSeen),
+      points,
+      achievements: Array.isArray(parsed.game?.achievements)
+        ? parsed.game.achievements.filter(
+            (id): id is string => typeof id === "string",
+          )
+        : [],
+      levels,
+      missed: cleanMissed(parsed.game?.missed),
+      rushBest: cleanNumber(parsed.game?.rushBest),
+      bestCombo: cleanNumber(parsed.game?.bestCombo),
+      daily: cleanDaily(parsed.game?.daily),
+    },
+  };
+}
+
 export function loadState(): AppState {
   const base = initialState();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return base;
-    const parsed = JSON.parse(raw) as Partial<AppState>;
-    const levels = emptyLevels();
-    const savedLevels = parsed.game?.levels;
-    if (savedLevels) {
-      for (const id of LEVEL_ORDER) {
-        const saved = savedLevels[id];
-        if (!saved) continue;
-        levels[id] = {
-          unlocked: Boolean(saved.unlocked) || id === "neighborhood",
-          completed: Boolean(saved.completed),
-          stars: Math.max(0, Math.min(3, Number(saved.stars) || 0)),
-          bestScore: Math.max(0, Number(saved.bestScore) || 0),
-        };
-      }
-    }
-    const points = LEVEL_ORDER.reduce(
-      (sum, id) => sum + levels[id].bestScore,
-      0,
-    );
-    return {
-      version: 1,
-      displayName:
-        typeof parsed.displayName === "string"
-          ? parsed.displayName.slice(0, 40)
-          : "",
-      zip:
-        typeof parsed.zip === "string" && /^\d{5}$/.test(parsed.zip)
-          ? parsed.zip
-          : "",
-      sound: typeof parsed.sound === "boolean" ? parsed.sound : true,
-      theme: parsed.theme === "light" ? "light" : "dark",
-      scans: cleanScans(parsed.scans),
-      disposals: cleanDisposals(parsed.disposals),
-      viewedItemIds: Array.isArray(parsed.viewedItemIds)
-        ? parsed.viewedItemIds
-            .filter(
-              (id): id is string =>
-                typeof id === "string" && Boolean(getItem(id)),
-            )
-            .slice(0, 100)
-        : [],
-      game: {
-        tutorialSeen: Boolean(parsed.game?.tutorialSeen),
-        points,
-        achievements: Array.isArray(parsed.game?.achievements)
-          ? parsed.game.achievements.filter(
-              (id): id is string => typeof id === "string",
-            )
-          : [],
-        levels,
-        missed: cleanMissed(parsed.game?.missed),
-        rushBest: cleanNumber(parsed.game?.rushBest),
-        bestCombo: cleanNumber(parsed.game?.bestCombo),
-        daily: cleanDaily(parsed.game?.daily),
-      },
-    };
+    return normalizeState(JSON.parse(raw) as Partial<AppState>);
   } catch {
     return base;
   }
+}
+
+/** Serializes a portable, versioned backup without sending it anywhere. */
+export function createBackup(state: AppState) {
+  return JSON.stringify(
+    {
+      app: "D-Trashify",
+      formatVersion: 1,
+      createdAt: new Date().toISOString(),
+      state,
+    },
+    null,
+    2,
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+/** Validates the backup envelope, then repairs individual saved records. */
+export function parseBackup(raw: string): AppState {
+  const backup: unknown = JSON.parse(raw);
+  if (!isRecord(backup) || !isRecord(backup.state)) {
+    throw new Error("This file is not a valid D-Trashify backup.");
+  }
+  const state = backup.state;
+  if (
+    backup.app !== "D-Trashify" ||
+    backup.formatVersion !== 1 ||
+    state.version !== 1 ||
+    typeof state.displayName !== "string" ||
+    typeof state.zip !== "string" ||
+    typeof state.sound !== "boolean" ||
+    (state.theme !== "light" && state.theme !== "dark") ||
+    !Array.isArray(state.scans) ||
+    !Array.isArray(state.disposals) ||
+    !Array.isArray(state.viewedItemIds) ||
+    !isRecord(state.game) ||
+    !isRecord(state.game.levels) ||
+    !Array.isArray(state.game.achievements) ||
+    !isRecord(state.game.missed) ||
+    !isRecord(state.game.daily)
+  ) {
+    throw new Error("This backup is incomplete or from an unsupported version.");
+  }
+  return normalizeState(state as Partial<AppState>);
 }
 
 /** Writes the whole app state. Fails quietly if storage is full or blocked. */
